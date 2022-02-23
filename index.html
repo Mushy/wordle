@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordle Clone</title>
+<style>
+body {
+	background: #000;
+	color: #FFF;
+}
+#guessGrid {
+	width: 50%;
+	margin: 0 auto;
+}
+#guessGrid div {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+input {
+	border: 5px solid #333;
+	padding: 1rem;
+	background: #000;
+	color: transparent;
+	text-shadow: 0 0 1px #FFF;
+	font-size: 1.5rem;
+	width: 2rem;
+	aspect-ratio: 1;
+	display: grid;
+	text-align: center;
+	text-transform: uppercase;
+	transition: background-color .3s ease, border-color .3s ease;
+}
+input:focus {
+	outline: none;
+	border-color: #CCC;
+}
+.invalid {
+	border-color: rgb(145, 143, 143);
+	background-color: rgb(145, 143, 143);
+	color: #FFF;
+}
+.valid {
+	border-color: orange;
+	background-color: orange;
+	color: #FFF;
+}
+.correct {
+	border-color: #090;
+	background-color: #090;
+	color: #FFF;
+}
+.buttons {
+	display: flex;
+	width: 25%;
+	margin: 0 auto;
+}
+button {
+	border: 1px solid #369;
+	background-color: #369;
+	color: #FFF;
+	padding: 15px 0;
+	transition: background-color .3s ease;
+	border-radius: 10px;
+}
+button:hover {
+	background-color: #69C;
+	cursor: pointer;
+}
+.buttons button {
+	width: 40%;
+}
+.buttons button + button {
+	margin-left: auto;
+}
+</style>
+</head>
+<body>
+<div id="word"></div>
+
+<select id="difficulty"></select>
+<div id="guessGrid"></div>
+<div class="buttons">
+	<button id="guess">Guess</button>
+	<button id="new">New Game</button>
+</div>
+
+<script src="words.js"></script>
+<script>
+// const settings = {
+// 	"3": {
+// 		"default": true,
+// 		"difficulty": "Easy",
+// 		"guesses": 10,
+// 		"wordLength": 3
+// 	},
+// 	"5": {
+// 		"default": true,
+// 		"difficulty": "Medium",
+// 		"guesses": 5,
+// 		"wordLength": 5
+// 	}
+// };
+const settings = {
+	"5": {
+		"default": true,
+		"difficulty": "Medium",
+		"guesses": 5,
+		"wordLength": 5
+	}
+};
+
+// Fetch can't call local files, needs to be http(s) so reference a .js file for now up top.
+// fetch('words.json')
+// 	.then(response => response.json())
+// 	.then(words => json);
+
+//\wr\w\we \w matches any word letter, r and e match those letters in those places.
+
+
+const debug = false;
+const area = document.getElementById('guessGrid');
+
+let word = '';
+let difficulty = 5;
+let guessCount = 0;
+let correctGuess = '';
+let won = false;
+
+
+const difficultySelect = document.getElementById('difficulty');
+function buildDifficulties()
+{
+	if (Object.keys(settings).length === 1) {
+		difficultySelect.style.display = 'none';
+
+		for (option in difficultySelect.options) {
+			difficultySelect.options.remove(0);
+		}
+
+		for (let key in settings) {
+			let opt = document.createElement('option');
+				opt.value = key;
+				opt.innerText =  'Difficulty: '+settings[key]['difficulty']+' Word Length: '+key+' Guesses: '+settings[key]['guesses'];
+				if (settings[key]['default'] === true) opt.selected = true;
+
+				difficultySelect.appendChild(opt);
+		}
+	}
+}
+buildDifficulties();
+
+difficultySelect.addEventListener('change', () => {
+	clearGame();
+
+	difficulty = difficultySelect.options[difficultySelect.selectedIndex].value;
+	generateForm(difficulty);
+});
+generateForm(difficulty);
+
+
+
+function clearGame()
+{
+	area.innerHTML = '';
+}
+
+
+
+function selectWord()
+{
+	let keys = Object.keys(words[difficulty]);
+	let randIndex = Math.floor(Math.random() * keys.length);
+	let randKey = keys[randIndex];
+	word = words[difficulty][randKey];
+
+	//word = 'basil';
+	if (debug) {
+		const showWord = document.getElementById('word');
+		showWord.innerText = word;
+	}
+}
+selectWord();
+
+
+
+function generateForm(difficulty)
+{
+	guessCount = 0;
+
+	const guesses = settings[difficulty]['guesses'];
+	for (let wordCount = 1; wordCount <= guesses; wordCount++) {
+		let wordRow = document.createElement('div');
+
+		for (let letterCount = 1; letterCount <= difficulty; letterCount++) {
+			let input = document.createElement('input');
+				input.type = 'text';
+				input.id = wordCount+'-'+letterCount;
+				input.maxLength = 1;
+				if (wordCount > 1 || letterCount > 1) input.disabled = true;
+				input.addEventListener('keydown', checkBackspace);
+				input.addEventListener('input', moveNext);
+
+			wordRow.appendChild(input);
+		}
+
+		area.appendChild(wordRow);
+	}
+
+	selectWord();
+
+	let firstLetter = document.getElementById('1-1');
+	firstLetter.focus();
+}
+
+
+
+function checkBackspace(evt)
+{
+	if (evt.keyCode === 8 && !evt.target.value) {
+		let moveTo = nextInput(evt.target, true);
+		if (moveTo) {
+			moveTo.focus();
+			moveTo.selectionStart = moveTo.selectionEnd = moveTo.value.length;
+		}
+	}
+}
+
+
+
+function moveNext(evt)
+{
+	if ((evt.keyCode || evt.charCode || 0) === 8) return false;
+
+	let current = evt.target;
+	let currentLetter = current.id.split('-');
+	if (currentLetter[1] != word.length && current.value.length !== 0) {
+		let moveTo = nextInput(current);
+		if (moveTo) {
+			moveTo.disabled = false;
+			moveTo.focus();
+		}
+	}
+}
+
+
+
+function nextInput(current, reverse = false)
+{
+	let inputs = document.querySelectorAll('input');
+	let previous;
+
+	for (let moveTo of inputs) {
+		if (reverse) {
+			if (moveTo == current) {
+				if (previous) {
+					return previous;
+				} else {
+					return false;
+				}
+			}
+		} else {
+			if (previous === current) return moveTo;
+		}
+
+		previous = moveTo;
+	}
+
+	return false;
+}
+
+
+
+const submit = document.getElementById('guess');
+submit.addEventListener('click', () => {
+	guessCount++;
+
+	let guessedWord = '';
+	for (let step = 1; step <= difficulty; step++) {
+		let letter = document.getElementById(guessCount+'-'+step);
+		guessedWord += letter.value;
+	}
+
+	if (!words[difficulty].includes(guessedWord)) {
+		guessCount--;
+		alert('not a word');
+		return false;
+	}
+
+	let seenBefore = {};
+	for (let step = 1; step <= difficulty; step++) {
+		correctGuess = 'invalid';
+		let letter = document.getElementById(guessCount+'-'+step);
+
+		if (!(letter.value in seenBefore)) {
+			seenBefore[letter.value] = 1;
+		} else {
+			seenBefore[letter.value]++;
+		}
+
+		if (word.includes(letter.value)) {
+			correctGuess = 'valid';
+
+			let timesInWord = (word.match(new RegExp(letter.value, 'g')) || []).length;
+			if (timesInWord < seenBefore[letter.value]) correctGuess = 'invalid';
+
+			if (word[step - 1] == letter.value) {
+				if (timesInWord < seenBefore[letter.value]) {
+					for (let unstep = 1; unstep < difficulty; unstep++) {
+						let unletter = document.getElementById(guessCount+'-'+unstep);
+						if (unletter.value == letter.value) {
+							unletter.classList.remove('valid');
+							unletter.classList.add('invalid');
+						}
+					}
+				}
+				correctGuess = 'correct';
+			}
+		}
+
+		letter.classList.add(correctGuess);
+	}
+
+	for (let step = 1; step <= difficulty; step++) {
+		let letter = document.getElementById(guessCount+'-'+step);
+		letter.disabled = true;
+	}
+
+	if (guessedWord === word) {
+		alert('YOU WIN!');
+		return true;
+	}
+
+	if (guessCount === settings[difficulty]['guesses']) {
+		submit.disabled = true;
+		alert('YOU LOSE!');
+		return false;
+	}
+
+	if (guessCount < difficulty) {
+		let nextGuess = document.getElementById((guessCount + 1)+'-1');
+		nextGuess.disabled = false;
+		nextGuess.focus();
+	}
+});
+
+
+
+const newGame = document.getElementById('new');
+newGame.addEventListener('click', () => {
+	clearGame();
+	generateForm(difficulty);
+	selectWord();
+});
+</script>
+</body>
+</html>
