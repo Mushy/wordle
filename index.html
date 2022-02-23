@@ -75,11 +75,23 @@ button:hover {
 .buttons button + button {
 	margin-left: auto;
 }
+#message {
+	text-align: center;
+	opacity: 0;
+	border: 1px solid transparent;
+	width: 50%;
+	margin: 0 auto;
+	padding: 3rem;
+	margin-bottom: 1rem;
+	border-radius: 5px;
+	transition: opacity .3s ease, background-color .3s ease, border-color .3s ease, color .3s ease;
+}
 </style>
 </head>
 <body>
 <div id="word"></div>
 
+<div id="message"></div>
 <select id="difficulty"></select>
 <div id="guessGrid"></div>
 <div class="buttons">
@@ -107,7 +119,7 @@ const settings = {
 	"5": {
 		"default": true,
 		"difficulty": "Medium",
-		"guesses": 5,
+		"guesses": 6,
 		"wordLength": 5
 	}
 };
@@ -122,6 +134,7 @@ const settings = {
 
 const debug = false;
 const area = document.getElementById('guessGrid');
+const message = document.getElementById('message');
 
 let word = '';
 let difficulty = 5;
@@ -164,6 +177,11 @@ generateForm(difficulty);
 
 function clearGame()
 {
+	message.style.opacity = 0;
+	message.innerText = '';
+	message.style.color = 'transparent';
+	message.style.backgroundColor = 'transparent';
+	message.style.bordeColor = 'transparent';
 	area.innerHTML = '';
 }
 
@@ -277,6 +295,9 @@ const submit = document.getElementById('guess');
 submit.addEventListener('click', () => {
 	guessCount++;
 
+	message.style.opacity = 0;
+	message.innerText = '';
+
 	let guessedWord = '';
 	for (let step = 1; step <= difficulty; step++) {
 		let letter = document.getElementById(guessCount+'-'+step);
@@ -285,7 +306,17 @@ submit.addEventListener('click', () => {
 
 	if (!words[difficulty].includes(guessedWord)) {
 		guessCount--;
-		alert('not a word');
+
+		message.innerText = 'Not in word list.';
+		message.style.opacity = 1;
+		message.style.color = '#0c5460';
+		message.style.backgroundColor = '#d1ecf1';
+		message.style.bordeColor = '#bee5eb';
+
+		let hideMessage = setTimeout(function() {
+			message.style.opacity = 0;
+		}, 1000);
+
 		return false;
 	}
 
@@ -329,13 +360,21 @@ submit.addEventListener('click', () => {
 	}
 
 	if (guessedWord === word) {
-		alert('YOU WIN!');
+		message.innerText = 'Congratulations, you got it right!';
+		message.style.opacity = 1;
+		message.style.color = '#155724';
+		message.style.backgroundColor = '#d4edda';
+		message.style.bordeColor = '#c3e6cb';
 		return true;
 	}
 
 	if (guessCount === settings[difficulty]['guesses']) {
 		submit.disabled = true;
-		alert('YOU LOSE!');
+		message.innerText = 'You lose! The word was '+word;
+		message.style.opacity = 1;
+		message.style.color = '#721c24';
+		message.style.backgroundColor = '#f8d7da';
+		message.style.bordeColor = '#f5c6cb';
 		return false;
 	}
 
