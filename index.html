@@ -135,6 +135,7 @@ const settings = {
 const debug = false;
 const area = document.getElementById('guessGrid');
 const message = document.getElementById('message');
+const submit = document.getElementById('guess');
 
 let word = '';
 let difficulty = 5;
@@ -227,6 +228,7 @@ function generateForm(difficulty)
 		area.appendChild(wordRow);
 	}
 
+	submit.disabled = false;
 	selectWord();
 
 	let firstLetter = document.getElementById('1-1');
@@ -291,7 +293,6 @@ function nextInput(current, reverse = false)
 
 
 
-const submit = document.getElementById('guess');
 submit.addEventListener('click', () => {
 	guessCount++;
 
@@ -299,6 +300,7 @@ submit.addEventListener('click', () => {
 	message.innerText = '';
 
 	let guessedWord = '';
+	const allowedGuesses = settings[difficulty]['guesses'];
 	for (let step = 1; step <= difficulty; step++) {
 		let letter = document.getElementById(guessCount+'-'+step);
 		guessedWord += letter.value;
@@ -378,7 +380,7 @@ submit.addEventListener('click', () => {
 		return false;
 	}
 
-	if (guessCount < difficulty) {
+	if (guessCount < settings[difficulty]['guesses']) {
 		let nextGuess = document.getElementById((guessCount + 1)+'-1');
 		nextGuess.disabled = false;
 		nextGuess.focus();
